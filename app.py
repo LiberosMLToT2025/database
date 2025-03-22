@@ -37,6 +37,18 @@ class DatabaseConnection:
 					return None
 				return result[0], result[1]  # returns (file_data, file_hash)
 	
+	def get_file_by_transaction(self: Self, transaction_id: str) -> tuple[bytes, str, int] | None:
+		with psycopg2.connect(**self.conn_params) as conn:
+			with conn.cursor() as cur:
+				cur.execute(
+					"SELECT file_data, file_hash, id FROM files WHERE transaction_id = %s",
+					(transaction_id,)
+				)
+				result = cur.fetchone()
+				if result is None:
+					return None
+				return result[0], result[1], result[2]  # returns (file_data, file_hash, file_id)
+	
 	def clear_database(self: Self) -> int:
 		with psycopg2.connect(**self.conn_params) as conn:
 			with conn.cursor() as cur:
@@ -95,6 +107,21 @@ async def download_file(file_id: int) -> Response:
 	
 	file_data, _ = result
 	# Return the file as a binary response
+	return Response(
+		content=file_data,
+		media_type="application/octet-stream",
+		headers={
+			"Content-Disposition": f"attachment; filename=file_{file_id}"
+		}
+	)
+
+@app.get("/download_by_transaction/{transaction_id}")
+async def download_file_by_transaction(transaction_id: str) -> Response:
+	result = db.get_file_by_transaction(transaction_id)
+	if result is None:
+		raise HTTPException(status_code=404, detail="File not found for this transaction ID")
+	
+	file_data, _, file_id = result
 	return Response(
 		content=file_data,
 		media_type="application/octet-stream",

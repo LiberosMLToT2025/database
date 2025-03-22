@@ -10,8 +10,11 @@ Register a transaction for that file:
 `curl -X POST http://localhost:8000/register_transaction/1/TX123456`
 Returns: {"success": true}
 
-Download stored file:
+Download stored file by database record id:
 `curl http://localhost:8000/download/1 --output downloaded_file`
+
+Download stored file by blockchain transaction id:
+`curl http://localhost:8000/download_by_transaction/TX123456 --output downloaded_file`
 
 Validate file integrity:
 `curl "http://localhost:8000/validate/1/123...abc"`
