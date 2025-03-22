@@ -1,0 +1,9 @@
+CREATE TABLE files (
+    id SERIAL PRIMARY KEY,
+    file_hash VARCHAR(64) NOT NULL UNIQUE,
+    file_data BYTEA NOT NULL,
+    upload_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    file_size BIGINT NOT NULL
+);
+
+CREATE INDEX idx_file_hash ON files(file_hash); 

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  db:
+    build: .
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=filestore
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=secretpassword
+
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data: 
