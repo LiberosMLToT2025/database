@@ -46,6 +46,16 @@ class DatabaseConnection:
 				# Reset the auto-increment counter
 				cur.execute("ALTER SEQUENCE files_id_seq RESTART WITH 1")
 				return deleted_count
+	
+	def register_transaction(self: Self, file_id: int, transaction_id: str) -> bool:
+		with psycopg2.connect(**self.conn_params) as conn:
+			with conn.cursor() as cur:
+				cur.execute(
+					"UPDATE files SET transaction_id = %s WHERE id = %s AND transaction_id IS NULL RETURNING id",
+					(transaction_id, file_id)
+				)
+				# Return True if a row was updated, False if no row was found or already had transaction_id
+				return cur.fetchone() is not None
 
 app = FastAPI()
 db = DatabaseConnection()
@@ -65,6 +75,17 @@ async def upload_file(file: UploadFile = File(...)) -> dict[str, str | int]:
 		"id": file_id,
 		"hash": file_hash
 	}
+
+@app.post("/register_transaction/{file_id}/{transaction_id}")
+async def register_transaction(file_id: int, transaction_id: str) -> dict[str, bool]:
+	success = db.register_transaction(file_id, transaction_id)
+	if not success:
+		raise HTTPException(
+			status_code=400,
+			detail="File not found or transaction already registered"
+		)
+	
+	return {"success": True}
 
 @app.get("/download/{file_id}")
 async def download_file(file_id: int) -> Response:
