@@ -2,6 +2,12 @@
 
 A FastAPI-based service for storing files with transaction ID and hash verification capabilities.
 
+## How to run server:
+```bash
+git clone https://github.com/LiberosMLToT2025/database.git
+docker-compose up --build
+```
+
 ## API Endpoints
 
 ### Upload a File
