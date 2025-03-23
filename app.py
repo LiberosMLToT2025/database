@@ -4,6 +4,7 @@ from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 import hashlib
 import psycopg2
+import time
 
 class DatabaseConnection:
 	def __init__(self: Self) -> None:
@@ -88,8 +89,11 @@ async def upload_file(file: UploadFile = File(...)) -> dict[str, int]:
 	# Read the file content
 	content = await file.read()
 	
+	# Generate a temporary unique hash
+	temp_hash = hashlib.sha256(content + str(time.time()).encode()).hexdigest()
+	
 	# Store in database and get the file id
-	file_id = db.store_file(content, "")	# empty hash initially
+	file_id = db.store_file(content, temp_hash)	# temporary unique hash
 	
 	return {
 		"id": file_id
