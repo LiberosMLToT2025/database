@@ -5,6 +5,7 @@ A FastAPI-based service for storing files with transaction ID and hash verificat
 ## How to run server:
 ```bash
 git clone https://github.com/LiberosMLToT2025/database.git
+cd database
 docker-compose up --build
 ```
 
