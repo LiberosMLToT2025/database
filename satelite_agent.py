@@ -2,6 +2,7 @@ from uagents import Agent, Context
 import json
 from datetime import datetime
 import os
+import requests
 
 # Import the IPSData model from observer_agent
 from observer_agent import IPSData
