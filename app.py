@@ -16,7 +16,7 @@ class DatabaseConnection:
 			"port": "5432"
 		}
 	
-	def store_file(self: Self, file_data: bytes, file_hash: str) -> int:
+	def store_file(self: Self, file_data: bytes, file_hash: str | None = None) -> int:
 		with psycopg2.connect(**self.conn_params) as conn:
 			with conn.cursor() as cur:
 				cur.execute(
@@ -64,6 +64,7 @@ class DatabaseConnection:
 	def register_transaction(self: Self, file_id: int, transaction_id: str, file_hash: str) -> bool:
 		with psycopg2.connect(**self.conn_params) as conn:
 			with conn.cursor() as cur:
+				# Update the file with transaction_id and file_hash where it doesn't already have one
 				cur.execute(
 					"UPDATE files SET transaction_id = %s, file_hash = %s WHERE id = %s AND transaction_id IS NULL RETURNING id",
 					(transaction_id, file_hash, file_id)
@@ -89,11 +90,8 @@ async def upload_file(file: UploadFile = File(...)) -> dict[str, int]:
 	# Read the file content
 	content = await file.read()
 	
-	# Generate a temporary unique hash
-	temp_hash = hashlib.sha256(content + str(time.time()).encode()).hexdigest()
-	
-	# Store in database and get the file id
-	file_id = db.store_file(content, temp_hash)	# temporary unique hash
+	# Store in database with NULL file_hash
+	file_id = db.store_file(file_data=content, file_hash=None)
 	
 	return {
 		"id": file_id
@@ -106,11 +104,19 @@ async def register_transaction(file_id: int, transaction_id: str, file_hash: str
 	if result is None:
 		raise HTTPException(status_code=404, detail="File not found")
 	
-	file_data, _ = result
+	file_data, stored_hash = result
+	
 	# Verify the provided hash matches the file content
 	calculated_hash = hashlib.sha256(file_data).hexdigest()
 	if calculated_hash != file_hash:
 		raise HTTPException(status_code=400, detail="Invalid file hash")
+	
+	# Check if transaction is already registered
+	if stored_hash is not None and transaction_id is not None:
+		raise HTTPException(
+			status_code=400,
+			detail="Transaction already registered for this file"
+		)
 	
 	# Update file hash and register transaction
 	success = db.register_transaction(file_id, transaction_id, file_hash)
@@ -163,8 +169,13 @@ async def validate_file(file_id: int, file_hash: str) -> dict[str, bool]:
 	# Calculate hash of stored file
 	calculated_hash = hashlib.sha256(file_data).hexdigest()
 	
+	# Handle case where stored_hash might be None
+	is_valid = calculated_hash == file_hash
+	if stored_hash is not None:
+		is_valid = is_valid and stored_hash == file_hash
+	
 	return {
-		"is_valid": calculated_hash == file_hash and stored_hash == file_hash
+		"is_valid": is_valid
 	}
 
 @app.post("/clear")
