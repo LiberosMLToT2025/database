@@ -8,6 +8,16 @@ git clone https://github.com/LiberosMLToT2025/database.git
 cd database
 docker-compose up --build
 ```
+## How to run agents
+### First terminal
+```bash
+python3 satelite_agent.py
+```
+### Second Agent
+```bash
+python3 observer_agent.py
+```
+### Please make sure to start with running sateli_agent.py script firstly.
 
 ## API Endpoints
 
