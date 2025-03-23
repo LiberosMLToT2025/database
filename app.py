@@ -73,7 +73,7 @@ class DatabaseConnection:
 
 app = FastAPI()
 
-# Dodanie middleware CORS
+# Adding middleware CORS
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=["http://localhost:3000"],
@@ -93,7 +93,7 @@ async def upload_file(file: UploadFile = File(...)) -> dict[str, int | str]:
 	file_hash = hashlib.sha256(content).hexdigest()
 	
 	# Store in database and get the file id
-	file_id = db.store_file(content, file_hash)  # Używam od razu prawidłowego hasha
+	file_id = db.store_file(content, file_hash)  # Using correct hash immediately
 	
 	return {
 		"id": file_id,
@@ -110,10 +110,6 @@ async def register_transaction(file_id: int, transaction_id: str, file_hash: str
 	file_data, stored_hash = result
 	# Verify the provided hash matches the file content
 	calculated_hash = hashlib.sha256(file_data).hexdigest()
-	
-	# if calculated_hash != file_hash:
-	# 	print(f"Hash mismatch: Calculated hash: {calculated_hash}, Provided hash: {file_hash}")
-	# 	raise HTTPException(status_code=400, detail=f"Invalid file hash. Expected: {calculated_hash}")
 	
 	# Update file hash and register transaction
 	success = db.register_transaction(file_id, transaction_id, file_hash)
