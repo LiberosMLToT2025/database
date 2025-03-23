@@ -1,6 +1,7 @@
 from typing import Self
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 import hashlib
 import psycopg2
 
@@ -70,6 +71,16 @@ class DatabaseConnection:
 				return cur.fetchone() is not None
 
 app = FastAPI()
+
+# Dodanie middleware CORS
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=["http://localhost:3000"],
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
+)
+
 db = DatabaseConnection()
 
 @app.post("/upload/")
