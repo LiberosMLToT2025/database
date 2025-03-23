@@ -59,12 +59,12 @@ class DatabaseConnection:
 				cur.execute("ALTER SEQUENCE files_id_seq RESTART WITH 1")
 				return deleted_count
 	
-	def register_transaction(self: Self, file_id: int, transaction_id: str) -> bool:
+	def register_transaction(self: Self, file_id: int, transaction_id: str, file_hash: str) -> bool:
 		with psycopg2.connect(**self.conn_params) as conn:
 			with conn.cursor() as cur:
 				cur.execute(
-					"UPDATE files SET transaction_id = %s WHERE id = %s AND transaction_id IS NULL RETURNING id",
-					(transaction_id, file_id)
+					"UPDATE files SET transaction_id = %s, file_hash = %s WHERE id = %s AND transaction_id IS NULL RETURNING id",
+					(transaction_id, file_hash, file_id)
 				)
 				# Return True if a row was updated, False if no row was found or already had transaction_id
 				return cur.fetchone() is not None
@@ -73,24 +73,32 @@ app = FastAPI()
 db = DatabaseConnection()
 
 @app.post("/upload/")
-async def upload_file(file: UploadFile = File(...)) -> dict[str, str | int]:
+async def upload_file(file: UploadFile = File(...)) -> dict[str, int]:
 	# Read the file content
 	content = await file.read()
 	
-	# Generate SHA-256 hash of the file
-	file_hash = hashlib.sha256(content).hexdigest()
-	
 	# Store in database and get the file id
-	file_id = db.store_file(content, file_hash)
+	file_id = db.store_file(content, "")	# empty hash initially
 	
 	return {
-		"id": file_id,
-		"hash": file_hash
+		"id": file_id
 	}
 
-@app.post("/register_transaction/{file_id}/{transaction_id}")
-async def register_transaction(file_id: int, transaction_id: str) -> dict[str, bool]:
-	success = db.register_transaction(file_id, transaction_id)
+@app.post("/register_transaction/{file_id}/{transaction_id}/{file_hash}")
+async def register_transaction(file_id: int, transaction_id: str, file_hash: str) -> dict[str, bool]:
+	# Get file data to verify hash
+	result = db.get_file(file_id)
+	if result is None:
+		raise HTTPException(status_code=404, detail="File not found")
+	
+	file_data, _ = result
+	# Verify the provided hash matches the file content
+	calculated_hash = hashlib.sha256(file_data).hexdigest()
+	if calculated_hash != file_hash:
+		raise HTTPException(status_code=400, detail="Invalid file hash")
+	
+	# Update file hash and register transaction
+	success = db.register_transaction(file_id, transaction_id, file_hash)
 	if not success:
 		raise HTTPException(
 			status_code=400,
