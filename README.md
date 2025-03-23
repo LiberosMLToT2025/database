@@ -2,6 +2,22 @@
 
 A FastAPI-based service for storing files with transaction ID and hash verification capabilities.
 
+## How to run database
+```bash
+git clone https://github.com/LiberosMLToT2025/database.git
+cd database
+docker-compose up --build
+```
+## How to run agents (must be in order)
+### First terminal
+```bash
+python3 satelite_agent.py
+```
+### Second terminal
+```bash
+python3 observer_agent.py
+```
+
 ## API Endpoints
 
 ### Upload a File
